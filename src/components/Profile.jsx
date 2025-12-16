@@ -12,13 +12,28 @@ export default function Profile() {
     const [username, setUsername] = useState(user.username);
     const [startBalance, setStartBalance] = useState(getStartingBalance(user.id));
     const [currency, setCurrency] = useState(user.currency || 'IDR');
+    const [customAvatar, setCustomAvatar] = useState(user.customAvatar || null);
+    const [avatarPreview, setAvatarPreview] = useState(user.customAvatar || user.avatar || null);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
+
+    const handleAvatarUpload = (e) => {
+        const file = e.target.files?.[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64 = reader.result;
+                setCustomAvatar(base64);
+                setAvatarPreview(base64);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     const handleSave = () => {
         setSaving(true);
         setTimeout(() => {
-            updateUser({ username, currency });
+            updateUser({ username, currency, customAvatar });
             setStartingBalance(user.id, startBalance);
             setSaving(false);
             setSaved(true);
@@ -54,18 +69,28 @@ export default function Profile() {
                     {/* Avatar */}
                     <div className="relative group">
                         <div className="w-28 h-28 rounded-full overflow-hidden ring-4 ring-primary-500/30 transition-all group-hover:ring-primary-500/60">
-                            {user.avatar ? (
+                            {avatarPreview ? (
                                 <img
-                                    src={user.avatar}
+                                    src={avatarPreview}
                                     alt={user.username}
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
                                 <div className="w-full h-full gradient-primary flex items-center justify-center text-white text-4xl font-bold">
-                                    {user.username[0].toUpperCase()}
+                                    {user.username?.[0]?.toUpperCase() || 'U'}
                                 </div>
                             )}
                         </div>
+                        {/* Camera upload button */}
+                        <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                            <Camera size={24} className="text-white" />
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleAvatarUpload}
+                                className="hidden"
+                            />
+                        </label>
                         {user.provider === 'google' && (
                             <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white dark:bg-gray-800 shadow-lg flex items-center justify-center">
                                 <svg className="w-5 h-5" viewBox="0 0 24 24">

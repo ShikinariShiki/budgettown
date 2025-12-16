@@ -42,7 +42,7 @@ export default function ScreenshotUpload({ onClose, onSuccess }) {
             const base64 = await new Promise(r => { const reader = new FileReader(); reader.onloadend = () => r(reader.result.split(',')[1]); reader.readAsDataURL(file); });
             const { GoogleGenerativeAI } = await import('@google/generative-ai');
             const model = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: 'gemini-1.5-flash' });
-            const prompt = `Analyze this receipt/transaction screenshot. Extract: amount (number only, no currency symbol), merchant name, date (YYYY-MM-DD format), type (expense/income), category (food/transport/shopping/bills/entertainment/healthcare/education/travel/groceries/other). Reply ONLY with valid JSON, no markdown: {"amount":number,"merchant":"string","date":"YYYY-MM-DD","suggested_category":"id","confidence":"high/medium/low","transaction_type":"expense/income"}`;
+            const prompt = `Analyze this receipt/transaction screenshot. Extract: amount (number only, no currency symbol), merchant name, date (YYYY-MM-DD format), type (expense/income), category (food/transport/parking/shopping/bills/entertainment/healthcare/education/travel/groceries/other). Reply ONLY with valid JSON, no markdown: {"amount":number,"merchant":"string","date":"YYYY-MM-DD","suggested_category":"id","confidence":"high/medium/low","transaction_type":"expense/income"}`;
             const result = await model.generateContent([prompt, { inlineData: { mimeType: file.type, data: base64 } }]);
             const text = (await result.response).text();
             console.log('Gemini response:', text);
@@ -66,17 +66,27 @@ export default function ScreenshotUpload({ onClose, onSuccess }) {
             });
         } catch (err) {
             console.error('Gemini error:', err);
-            if (err.message?.includes('API_KEY') || err.message?.includes('API key')) {
+            const errMsg = err.message || err.toString();
+
+            if (errMsg.includes('API_KEY') || errMsg.includes('API key') || errMsg.includes('invalid')) {
                 setError('Invalid API key. Please check your Gemini API key.');
                 setShowApiKeyInput(true);
-            } else if (err.message?.includes('Could not extract')) {
-                setError(err.message);
-            } else if (err.message?.includes('JSON')) {
+            } else if (errMsg.includes('Could not extract')) {
+                setError(errMsg);
+            } else if (errMsg.includes('JSON') || errMsg.includes('parse')) {
                 setError('Could not parse transaction data. Try a clearer image.');
-            } else if (err.message?.includes('network') || err.message?.includes('fetch')) {
-                setError('Network error. Check your internet connection.');
+            } else if (errMsg.includes('quota') || errMsg.includes('RESOURCE_EXHAUSTED')) {
+                setError('API quota exceeded. Try again later or use a different API key.');
+            } else if (errMsg.includes('PERMISSION_DENIED')) {
+                setError('API permission denied. Make sure Gemini API is enabled for this key.');
+                setShowApiKeyInput(true);
+            } else if (errMsg.includes('blocked') || errMsg.includes('safety')) {
+                setError('Content blocked by safety filters. Try a different image.');
+            } else if (errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError')) {
+                setError('Network error. Check your internet and try again.');
             } else {
-                setError('Failed to process: ' + (err.message || 'Unknown error'));
+                // Show actual error for debugging
+                setError('Error: ' + errMsg.substring(0, 100));
             }
         } finally { setLoading(false); }
     };
