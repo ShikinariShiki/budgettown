@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { addTransaction, updateTransaction, getUserData, setStartingBalance, getWallets, setWalletBalance } from '../utils/storage';
+import { addTransaction, updateTransaction, getUserData, getWallets } from '../utils/storage';
 import { getCategoriesByType, formatNumber, parseFormattedNumber } from '../utils/categories';
 import { X, Save, Wallet, Banknote, CreditCard } from 'lucide-react';
 
@@ -77,17 +77,6 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
         }
     };
 
-    const handleStartingBalance = (e) => {
-        e.preventDefault();
-        const num = parseFloat(startingBalanceAmount);
-        if (isNaN(num)) {
-            setError('Please enter a valid amount');
-            return;
-        }
-        setStartingBalance(user.id, num);
-        setShowStartingBalance(false);
-        onSuccess?.();
-    };
 
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 animate-fade-in">
