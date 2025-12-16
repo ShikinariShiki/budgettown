@@ -42,16 +42,42 @@ export default function ScreenshotUpload({ onClose, onSuccess }) {
             const base64 = await new Promise(r => { const reader = new FileReader(); reader.onloadend = () => r(reader.result.split(',')[1]); reader.readAsDataURL(file); });
             const { GoogleGenerativeAI } = await import('@google/generative-ai');
             const model = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: 'gemini-1.5-flash' });
-            const prompt = `Analyze this receipt. Extract: amount (number only), merchant, date (YYYY-MM-DD), type (expense/income), category (food/transport/shopping/bills/entertainment/healthcare/education/travel/groceries/other). Reply ONLY JSON: {"amount":number,"merchant":"string","date":"YYYY-MM-DD","suggested_category":"id","confidence":"high/medium/low","transaction_type":"expense/income"}`;
+            const prompt = `Analyze this receipt/transaction screenshot. Extract: amount (number only, no currency symbol), merchant name, date (YYYY-MM-DD format), type (expense/income), category (food/transport/shopping/bills/entertainment/healthcare/education/travel/groceries/other). Reply ONLY with valid JSON, no markdown: {"amount":number,"merchant":"string","date":"YYYY-MM-DD","suggested_category":"id","confidence":"high/medium/low","transaction_type":"expense/income"}`;
             const result = await model.generateContent([prompt, { inlineData: { mimeType: file.type, data: base64 } }]);
             const text = (await result.response).text();
-            const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)[0]);
+            console.log('Gemini response:', text);
+
+            // Try to extract JSON from response
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) {
+                throw new Error('Could not extract data from image. Try a clearer screenshot.');
+            }
+
+            const parsed = JSON.parse(jsonMatch[0]);
             setExtractedData(parsed);
             const savedCat = parsed.merchant ? getMerchantCategory(user.id, parsed.merchant) : null;
-            setFormData({ amount: parsed.amount?.toString() || '', merchant: parsed.merchant || '', date: parsed.date || new Date().toISOString().split('T')[0], category: savedCat || parsed.suggested_category || 'other', type: parsed.transaction_type || 'expense', description: parsed.merchant || '' });
+            setFormData({
+                amount: parsed.amount?.toString() || '',
+                merchant: parsed.merchant || '',
+                date: parsed.date || new Date().toISOString().split('T')[0],
+                category: savedCat || parsed.suggested_category || 'other',
+                type: parsed.transaction_type || 'expense',
+                description: parsed.merchant || ''
+            });
         } catch (err) {
-            setError(err.message?.includes('API_KEY') ? 'Invalid API key' : 'Failed to process. Try again.');
-            if (err.message?.includes('API_KEY')) setShowApiKeyInput(true);
+            console.error('Gemini error:', err);
+            if (err.message?.includes('API_KEY') || err.message?.includes('API key')) {
+                setError('Invalid API key. Please check your Gemini API key.');
+                setShowApiKeyInput(true);
+            } else if (err.message?.includes('Could not extract')) {
+                setError(err.message);
+            } else if (err.message?.includes('JSON')) {
+                setError('Could not parse transaction data. Try a clearer image.');
+            } else if (err.message?.includes('network') || err.message?.includes('fetch')) {
+                setError('Network error. Check your internet connection.');
+            } else {
+                setError('Failed to process: ' + (err.message || 'Unknown error'));
+            }
         } finally { setLoading(false); }
     };
 
