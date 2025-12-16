@@ -36,143 +36,250 @@ export function AuthProvider({ children }) {
         }
     }, []);
 
-    // Fetch profile from Supabase
-    const fetchProfile = async (userId) => {
-        const profileData = await getProfile(userId);
-        if (profileData) {
-            setProfile(profileData);
-        }
-        return profileData;
-    };
-
-    // Handle Supabase auth state changes
+    // Check for saved session on load
     useEffect(() => {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (session?.user) {
-                const supabaseUser = {
-                    id: session.user.id,
-                    email: session.user.email,
-                    username: session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0],
-                    avatar: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
-                    provider: session.user.app_metadata?.provider || 'email',
-                };
-                setUser(supabaseUser);
-                await fetchProfile(session.user.id);
-            } else {
-                setUser(null);
-                setProfile(null);
+        const savedUser = localStorage.getItem('budgetown-current-user');
+        if (savedUser) {
+            try {
+                const parsed = JSON.parse(savedUser);
+                setUser(parsed);
+                // Try to fetch profile from Supabase
+                if (parsed.supabaseId) {
+                    getProfile(parsed.supabaseId).then(p => {
+                        if (p) setProfile(p);
+                    });
+                }
+            } catch (e) {
+                localStorage.removeItem('budgetown-current-user');
             }
-            setLoading(false);
-        });
-
-        // Check initial session
-        supabase.auth.getSession().then(async ({ data: { session } }) => {
-            if (session?.user) {
-                const supabaseUser = {
-                    id: session.user.id,
-                    email: session.user.email,
-                    username: session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0],
-                    avatar: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
-                    provider: session.user.app_metadata?.provider || 'email',
-                };
-                setUser(supabaseUser);
-                await fetchProfile(session.user.id);
-            }
-            setLoading(false);
-        });
-
-        return () => subscription.unsubscribe();
+        }
+        setLoading(false);
     }, []);
 
-    // Handle Google OAuth callback (for popup method)
+    // Handle Google OAuth callback
     const handleGoogleCallback = useCallback(async (response) => {
         try {
-            const { data, error } = await supabase.auth.signInWithIdToken({
-                provider: 'google',
-                token: response.credential,
-            });
+            const payload = JSON.parse(atob(response.credential.split('.')[1]));
 
-            if (error) {
-                console.error('Supabase Google Sign-In error:', error);
-                // Fallback: decode token manually for legacy support
-                const payload = JSON.parse(atob(response.credential.split('.')[1]));
-                console.log('Google payload:', payload);
+            const googleUser = {
+                id: `google_${payload.sub}`,
+                username: payload.name,
+                email: payload.email,
+                avatar: payload.picture,
+                provider: 'google',
+                createdAt: new Date().toISOString()
+            };
+
+            // Save to localStorage (works offline)
+            const existingUsers = JSON.parse(localStorage.getItem('budgetown-users') || '{}');
+            if (!existingUsers[googleUser.email]) {
+                existingUsers[googleUser.email] = googleUser;
+                localStorage.setItem('budgetown-users', JSON.stringify(existingUsers));
+                localStorage.setItem(`budgetown-data-${googleUser.id}`, JSON.stringify({
+                    transactions: [],
+                    budgets: {},
+                    startingBalance: 0,
+                    merchantCategories: {},
+                    fixedCosts: []
+                }));
+            } else {
+                existingUsers[googleUser.email] = {
+                    ...existingUsers[googleUser.email],
+                    avatar: googleUser.avatar,
+                    username: googleUser.username
+                };
+                localStorage.setItem('budgetown-users', JSON.stringify(existingUsers));
+            }
+
+            setUser(googleUser);
+            localStorage.setItem('budgetown-current-user', JSON.stringify(googleUser));
+
+            // Try to sync with Supabase (optional, non-blocking)
+            try {
+                const { data: authData } = await supabase.auth.signInWithIdToken({
+                    provider: 'google',
+                    token: response.credential,
+                });
+                if (authData?.user) {
+                    googleUser.supabaseId = authData.user.id;
+                    localStorage.setItem('budgetown-current-user', JSON.stringify(googleUser));
+                    const profileData = await getProfile(authData.user.id);
+                    if (profileData) setProfile(profileData);
+                }
+            } catch (supabaseErr) {
+                console.log('Supabase sync skipped (offline mode):', supabaseErr.message);
             }
         } catch (error) {
             console.error('Google Sign-In error:', error);
         }
     }, []);
 
-    // Trigger Google Sign-In with Supabase OAuth
-    const loginWithGoogle = useCallback(async () => {
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: window.location.origin,
-            }
-        });
+    // Trigger Google Sign-In popup
+    const loginWithGoogle = useCallback(() => {
+        if (window.google?.accounts?.oauth2) {
+            try {
+                const client = window.google.accounts.oauth2.initTokenClient({
+                    client_id: GOOGLE_CONFIG.clientId,
+                    scope: 'email profile openid',
+                    prompt: 'select_account',
+                    callback: async (tokenResponse) => {
+                        if (tokenResponse.error) {
+                            console.error('OAuth error:', tokenResponse.error);
+                            return;
+                        }
+                        if (tokenResponse.access_token) {
+                            try {
+                                const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                                    headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+                                });
+                                const payload = await response.json();
 
-        if (error) {
-            console.error('Google OAuth error:', error);
+                                const googleUser = {
+                                    id: `google_${payload.sub}`,
+                                    username: payload.name,
+                                    email: payload.email,
+                                    avatar: payload.picture,
+                                    provider: 'google',
+                                    createdAt: new Date().toISOString()
+                                };
+
+                                // Save to localStorage
+                                const existingUsers = JSON.parse(localStorage.getItem('budgetown-users') || '{}');
+                                if (!existingUsers[googleUser.email]) {
+                                    existingUsers[googleUser.email] = googleUser;
+                                    localStorage.setItem('budgetown-users', JSON.stringify(existingUsers));
+                                    localStorage.setItem(`budgetown-data-${googleUser.id}`, JSON.stringify({
+                                        transactions: [],
+                                        budgets: {},
+                                        startingBalance: 0,
+                                        merchantCategories: {},
+                                        fixedCosts: []
+                                    }));
+                                } else {
+                                    existingUsers[googleUser.email] = {
+                                        ...existingUsers[googleUser.email],
+                                        avatar: googleUser.avatar,
+                                        username: googleUser.username,
+                                        id: googleUser.id
+                                    };
+                                    localStorage.setItem('budgetown-users', JSON.stringify(existingUsers));
+                                }
+
+                                setUser(googleUser);
+                                localStorage.setItem('budgetown-current-user', JSON.stringify(googleUser));
+                            } catch (error) {
+                                console.error('Failed to get user info:', error);
+                            }
+                        }
+                    },
+                });
+                client.requestAccessToken({ prompt: 'select_account' });
+            } catch (error) {
+                console.error('Error initializing Google OAuth:', error);
+            }
+        } else {
+            console.error('Google OAuth2 not loaded yet');
+            setTimeout(() => {
+                if (window.google?.accounts?.oauth2) {
+                    loginWithGoogle();
+                } else {
+                    alert('Google Sign-In is not available. Please refresh the page and try again.');
+                }
+            }, 1000);
         }
     }, []);
 
     // Register with email/password
     const register = async (username, email, password) => {
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                data: {
-                    full_name: username,
-                }
-            }
-        });
+        const existingUsers = JSON.parse(localStorage.getItem('budgetown-users') || '{}');
+        if (existingUsers[email]) {
+            throw new Error('Email already registered');
+        }
 
-        if (error) throw new Error(error.message);
-        return data.user;
+        const newUser = {
+            id: Date.now().toString(),
+            username,
+            email,
+            provider: 'local',
+            createdAt: new Date().toISOString()
+        };
+
+        existingUsers[email] = { ...newUser, password: btoa(password) };
+        localStorage.setItem('budgetown-users', JSON.stringify(existingUsers));
+        localStorage.setItem(`budgetown-data-${newUser.id}`, JSON.stringify({
+            transactions: [],
+            budgets: {},
+            startingBalance: 0,
+            merchantCategories: {},
+            fixedCosts: []
+        }));
+
+        setUser(newUser);
+        localStorage.setItem('budgetown-current-user', JSON.stringify(newUser));
+        return newUser;
     };
 
     // Login with email/password
     const login = async (email, password) => {
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
+        const existingUsers = JSON.parse(localStorage.getItem('budgetown-users') || '{}');
+        const userData = existingUsers[email];
 
-        if (error) throw new Error(error.message);
-        return data.user;
+        if (!userData) throw new Error('User not found');
+        if (userData.provider === 'google' && !userData.password) {
+            throw new Error('This account uses Google Sign-In. Please use the Google button to login.');
+        }
+        if (userData.password !== btoa(password)) throw new Error('Invalid password');
+
+        const { password: _, ...userWithoutPassword } = userData;
+        setUser(userWithoutPassword);
+        localStorage.setItem('budgetown-current-user', JSON.stringify(userWithoutPassword));
+        return userWithoutPassword;
     };
 
     // Logout
     const logout = async () => {
-        await supabase.auth.signOut();
         setUser(null);
         setProfile(null);
+        localStorage.removeItem('budgetown-current-user');
         if (window.google?.accounts?.id) {
             window.google.accounts.id.disableAutoSelect();
         }
+        try {
+            await supabase.auth.signOut();
+        } catch (e) { }
     };
 
     // Update user profile
     const updateUser = async (updates) => {
         if (!user) return;
+        const updatedUser = { ...user, ...updates };
+        setUser(updatedUser);
+        localStorage.setItem('budgetown-current-user', JSON.stringify(updatedUser));
 
-        // Update Supabase auth metadata
-        if (updates.username) {
-            await supabase.auth.updateUser({
-                data: { full_name: updates.username }
-            });
+        const existingUsers = JSON.parse(localStorage.getItem('budgetown-users') || '{}');
+        if (existingUsers[user.email]) {
+            existingUsers[user.email] = { ...existingUsers[user.email], ...updates };
+            localStorage.setItem('budgetown-users', JSON.stringify(existingUsers));
         }
 
-        // Update profile in database
-        const updatedProfile = await updateProfileDb(user.id, updates);
-        if (updatedProfile) {
-            setProfile(updatedProfile);
+        // Try to sync with Supabase
+        if (user.supabaseId) {
+            try {
+                const updatedProfile = await updateProfileDb(user.supabaseId, updates);
+                if (updatedProfile) setProfile(updatedProfile);
+            } catch (e) {
+                console.log('Profile sync skipped:', e.message);
+            }
         }
+    };
 
-        // Update local user state
-        setUser(prev => ({ ...prev, ...updates }));
+    // Check if user is new (hasn't completed onboarding)
+    const checkNewUserData = () => {
+        if (!user) return false;
+        const userData = localStorage.getItem(`budgetown-data-${user.id}`);
+        if (!userData) return true;
+        const data = JSON.parse(userData);
+        return data.transactions?.length === 0 && !data.onboardingCompleted;
     };
 
     return (
@@ -185,10 +292,9 @@ export function AuthProvider({ children }) {
             loginWithGoogle,
             logout,
             updateUser,
-            fetchProfile,
             isAuthenticated: !!user,
             googleReady,
-            isNewUser: profile && !profile.onboarding_completed,
+            isNewUser: checkNewUserData(),
         }}>
             {children}
         </AuthContext.Provider>
