@@ -11,5 +11,5 @@ export const SUPABASE_CONFIG = {
 // Telegram Bot configuration
 // Token is stored ONLY in Supabase Edge Function secrets - NEVER in frontend!
 export const TELEGRAM_CONFIG = {
-    botUsername: 'BudgeTownBot',
+    botUsername: 'budgettown_bot',
 };
