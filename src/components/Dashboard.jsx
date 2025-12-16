@@ -11,7 +11,8 @@ import {
     Upload,
     ArrowUpRight,
     ArrowDownRight,
-    Calendar
+    Calendar,
+    Lightbulb
 } from 'lucide-react';
 
 // Get first name from full name
@@ -22,7 +23,7 @@ const getFirstName = (fullName) => {
 
 export default function Dashboard({ onAddTransaction, onUploadScreenshot }) {
     const { user } = useAuth();
-    const { t, getGreeting } = useLanguage();
+    const { t, getGreeting, getFinancialTip } = useLanguage();
     const data = getUserData(user.id);
     const balance = calculateBalance(user.id);
     const firstName = getFirstName(user.username);
@@ -30,20 +31,7 @@ export default function Dashboard({ onAddTransaction, onUploadScreenshot }) {
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
 
-    // Memoize greeting to prevent re-render changes
-    const greeting = useMemo(() =>
-        getGreeting(firstName, balance, data.transactions.length > 0),
-        [firstName, balance > 0, data.transactions.length > 0]
-    );
-
-    // Get subtitle based on context
-    const getSubtitle = () => {
-        if (data.transactions.length === 0) return t('dashboard.subtitleNoTx');
-        if (balance > 1000000) return t('dashboard.subtitleGood');
-        if (balance < 0) return t('dashboard.subtitleBad');
-        return t('dashboard.subtitle');
-    };
-
+    // Calculate monthly stats first
     const monthlyStats = useMemo(() => {
         const monthTransactions = data.transactions.filter(t => {
             const tDate = new Date(t.date);
@@ -60,6 +48,26 @@ export default function Dashboard({ onAddTransaction, onUploadScreenshot }) {
 
         return { income, expenses, net: income - expenses };
     }, [data.transactions, currentMonth, currentYear]);
+
+    // Memoize greeting to prevent re-render changes
+    const greeting = useMemo(() =>
+        getGreeting(firstName, balance, data.transactions.length > 0),
+        [firstName, balance > 0, data.transactions.length > 0]
+    );
+
+    // Memoize financial tip
+    const financialTip = useMemo(() =>
+        getFinancialTip(monthlyStats.income, monthlyStats.expenses, data.transactions.length > 0),
+        [monthlyStats.income, monthlyStats.expenses, data.transactions.length > 0]
+    );
+
+    // Get subtitle based on context
+    const getSubtitle = () => {
+        if (data.transactions.length === 0) return t('dashboard.subtitleNoTx');
+        if (balance > 1000000) return t('dashboard.subtitleGood');
+        if (balance < 0) return t('dashboard.subtitleBad');
+        return t('dashboard.subtitle');
+    };
 
     const recentTransactions = data.transactions.slice(0, 5);
 
@@ -123,6 +131,23 @@ export default function Dashboard({ onAddTransaction, onUploadScreenshot }) {
                 <p className="text-gray-400 dark:text-gray-500 text-sm">
                     {balance >= 0 ? t('dashboard.availableToSpend') : t('dashboard.inTheRed')}
                 </p>
+            </div>
+
+            {/* Financial Tip Card */}
+            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-2xl p-4 border border-amber-200 dark:border-amber-700/50">
+                <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-500/20 flex-shrink-0">
+                        <Lightbulb size={20} className="text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div>
+                        <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-1">
+                            {t('dashboard.financialTip')}
+                        </p>
+                        <p className="text-sm text-amber-700 dark:text-amber-400">
+                            {financialTip}
+                        </p>
+                    </div>
+                </div>
             </div>
 
             {/* Stats Grid */}
