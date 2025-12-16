@@ -2,7 +2,13 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { addTransaction, updateTransaction, getUserData, setStartingBalance } from '../utils/storage';
 import { getCategoriesByType } from '../utils/categories';
-import { X, Save, Wallet } from 'lucide-react';
+import { X, Save, Wallet, Banknote, CreditCard } from 'lucide-react';
+
+const PAYMENT_METHODS = [
+    { id: 'cash', label: 'Tunai', icon: Banknote, color: '#22c55e' },
+    { id: 'bca', label: 'BCA', icon: CreditCard, color: '#004B93' },
+    { id: 'bni', label: 'BNI', icon: CreditCard, color: '#F5821F' },
+];
 
 export default function TransactionForm({ onClose, editTransaction = null, onSuccess }) {
     const { user } = useAuth();
@@ -11,6 +17,7 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
     const [type, setType] = useState(editTransaction?.type || 'expense');
     const [amount, setAmount] = useState(editTransaction?.amount?.toString() || '');
     const [category, setCategory] = useState(editTransaction?.category || '');
+    const [paymentMethod, setPaymentMethod] = useState(editTransaction?.payment_method || 'cash');
     const [description, setDescription] = useState(editTransaction?.description || '');
     const [date, setDate] = useState(editTransaction?.date || new Date().toISOString().split('T')[0]);
     const [showStartingBalance, setShowStartingBalance] = useState(false);
@@ -45,6 +52,7 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
             type,
             amount: numAmount,
             category,
+            payment_method: paymentMethod,
             description: description.trim(),
             date
         };
@@ -160,6 +168,32 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
                                     </span>
                                 </button>
                             ))}
+                        </div>
+                    </div>
+
+                    {/* Payment Method */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Payment Method</label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {PAYMENT_METHODS.map((method) => {
+                                const Icon = method.icon;
+                                return (
+                                    <button
+                                        key={method.id}
+                                        type="button"
+                                        onClick={() => setPaymentMethod(method.id)}
+                                        className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${paymentMethod === method.id
+                                            ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-500/20'
+                                            : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
+                                            }`}
+                                    >
+                                        <Icon size={20} style={{ color: method.color }} />
+                                        <span className="text-xs text-gray-600 dark:text-gray-300">
+                                            {method.label}
+                                        </span>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 

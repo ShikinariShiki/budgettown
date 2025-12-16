@@ -13,10 +13,11 @@ import FixedCosts from './components/FixedCosts';
 import ScreenshotUpload from './components/ScreenshotUpload';
 import SpreadsheetTools from './components/SpreadsheetTools';
 import Profile from './components/Profile';
+import Onboarding from './components/Onboarding';
 import { Home, List, BarChart3, Target, FileSpreadsheet, LogOut, Sun, Moon, Menu, X, User, CalendarClock } from 'lucide-react';
 
 function App() {
-    const { user, loading, logout, isAuthenticated } = useAuth();
+    const { user, loading, logout, isAuthenticated, isNewUser } = useAuth();
     const { theme, toggleTheme } = useTheme();
     const { t } = useLanguage();
     const [authView, setAuthView] = useState('login');
@@ -26,6 +27,7 @@ function App() {
     const [editingTransaction, setEditingTransaction] = useState(null);
     const [refreshKey, setRefreshKey] = useState(0);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [showOnboarding, setShowOnboarding] = useState(false);
 
     const refresh = () => setRefreshKey(k => k + 1);
 
@@ -223,6 +225,11 @@ function App() {
                         <ScreenshotUpload onClose={() => setShowScreenshotUpload(false)} onSuccess={refresh} />
                     </div>
                 </div>
+            )}
+
+            {/* Onboarding for new users */}
+            {(isNewUser || showOnboarding) && (
+                <Onboarding onComplete={() => setShowOnboarding(false)} />
             )}
         </div>
     );

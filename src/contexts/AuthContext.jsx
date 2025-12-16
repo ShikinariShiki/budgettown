@@ -1,10 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase, getProfile, createProfile, updateProfile as updateProfileDb } from '../lib/supabase';
 import { GOOGLE_CONFIG } from '../config/googleConfig';
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
+    const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [googleReady, setGoogleReady] = useState(false);
 
@@ -21,258 +23,172 @@ export function AuthProvider({ children }) {
             }
         };
 
-        // Check if script is already loaded
         if (window.google?.accounts?.id) {
             initGoogle();
         } else {
-            // Wait for script to load
             const checkGoogle = setInterval(() => {
                 if (window.google?.accounts?.id) {
                     clearInterval(checkGoogle);
                     initGoogle();
                 }
             }, 100);
-
-            // Cleanup after 10 seconds
             setTimeout(() => clearInterval(checkGoogle), 10000);
         }
     }, []);
 
-    // Handle Google OAuth callback
-    const handleGoogleCallback = useCallback((response) => {
-        try {
-            // Decode JWT token from Google
-            const payload = JSON.parse(atob(response.credential.split('.')[1]));
+    // Fetch profile from Supabase
+    const fetchProfile = async (userId) => {
+        const profileData = await getProfile(userId);
+        if (profileData) {
+            setProfile(profileData);
+        }
+        return profileData;
+    };
 
-            const googleUser = {
-                id: `google_${payload.sub}`,
-                username: payload.name,
-                email: payload.email,
-                avatar: payload.picture,
-                provider: 'google',
-                createdAt: new Date().toISOString()
-            };
-
-            // Check if user exists in our storage
-            const existingUsers = JSON.parse(localStorage.getItem('budgetown-users') || '{}');
-
-            if (!existingUsers[googleUser.email]) {
-                // Register new Google user
-                existingUsers[googleUser.email] = googleUser;
-                localStorage.setItem('budgetown-users', JSON.stringify(existingUsers));
-
-                // Initialize user data storage
-                localStorage.setItem(`budgetown-data-${googleUser.id}`, JSON.stringify({
-                    transactions: [],
-                    budgets: {},
-                    startingBalance: 0,
-                    merchantCategories: {}
-                }));
-            } else {
-                // Update existing user with latest Google info
-                existingUsers[googleUser.email] = {
-                    ...existingUsers[googleUser.email],
-                    avatar: googleUser.avatar,
-                    username: googleUser.username
+    // Handle Supabase auth state changes
+    useEffect(() => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (session?.user) {
+                const supabaseUser = {
+                    id: session.user.id,
+                    email: session.user.email,
+                    username: session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0],
+                    avatar: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
+                    provider: session.user.app_metadata?.provider || 'email',
                 };
-                localStorage.setItem('budgetown-users', JSON.stringify(existingUsers));
+                setUser(supabaseUser);
+                await fetchProfile(session.user.id);
+            } else {
+                setUser(null);
+                setProfile(null);
             }
+            setLoading(false);
+        });
 
-            // Log in the user
-            setUser(googleUser);
-            localStorage.setItem('budgetown-current-user', JSON.stringify(googleUser));
+        // Check initial session
+        supabase.auth.getSession().then(async ({ data: { session } }) => {
+            if (session?.user) {
+                const supabaseUser = {
+                    id: session.user.id,
+                    email: session.user.email,
+                    username: session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0],
+                    avatar: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
+                    provider: session.user.app_metadata?.provider || 'email',
+                };
+                setUser(supabaseUser);
+                await fetchProfile(session.user.id);
+            }
+            setLoading(false);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    // Handle Google OAuth callback (for popup method)
+    const handleGoogleCallback = useCallback(async (response) => {
+        try {
+            const { data, error } = await supabase.auth.signInWithIdToken({
+                provider: 'google',
+                token: response.credential,
+            });
+
+            if (error) {
+                console.error('Supabase Google Sign-In error:', error);
+                // Fallback: decode token manually for legacy support
+                const payload = JSON.parse(atob(response.credential.split('.')[1]));
+                console.log('Google payload:', payload);
+            }
         } catch (error) {
             console.error('Google Sign-In error:', error);
         }
     }, []);
 
-    // Trigger Google Sign-In popup using OAuth2
-    const loginWithGoogle = useCallback(() => {
-        if (window.google?.accounts?.oauth2) {
-            try {
-                const client = window.google.accounts.oauth2.initTokenClient({
-                    client_id: GOOGLE_CONFIG.clientId,
-                    scope: 'email profile openid',
-                    prompt: 'select_account',
-                    callback: async (tokenResponse) => {
-                        if (tokenResponse.error) {
-                            console.error('OAuth error:', tokenResponse.error);
-                            return;
-                        }
-                        if (tokenResponse.access_token) {
-                            try {
-                                // Fetch user info from Google
-                                const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                                    headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
-                                });
-                                const payload = await response.json();
-
-                                const googleUser = {
-                                    id: `google_${payload.sub}`,
-                                    username: payload.name,
-                                    email: payload.email,
-                                    avatar: payload.picture,
-                                    provider: 'google',
-                                    createdAt: new Date().toISOString()
-                                };
-
-                                // Check if user exists in our storage
-                                const existingUsers = JSON.parse(localStorage.getItem('budgetown-users') || '{}');
-
-                                if (!existingUsers[googleUser.email]) {
-                                    existingUsers[googleUser.email] = googleUser;
-                                    localStorage.setItem('budgetown-users', JSON.stringify(existingUsers));
-                                    localStorage.setItem(`budgetown-data-${googleUser.id}`, JSON.stringify({
-                                        transactions: [],
-                                        budgets: {},
-                                        startingBalance: 0,
-                                        merchantCategories: {}
-                                    }));
-                                } else {
-                                    existingUsers[googleUser.email] = {
-                                        ...existingUsers[googleUser.email],
-                                        avatar: googleUser.avatar,
-                                        username: googleUser.username,
-                                        id: googleUser.id
-                                    };
-                                    localStorage.setItem('budgetown-users', JSON.stringify(existingUsers));
-                                }
-
-                                setUser(googleUser);
-                                localStorage.setItem('budgetown-current-user', JSON.stringify(googleUser));
-                            } catch (error) {
-                                console.error('Failed to get user info:', error);
-                            }
-                        }
-                    },
-                });
-                // Request access token - this triggers the popup
-                client.requestAccessToken({ prompt: 'select_account' });
-            } catch (error) {
-                console.error('Error initializing Google OAuth:', error);
+    // Trigger Google Sign-In with Supabase OAuth
+    const loginWithGoogle = useCallback(async () => {
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: window.location.origin,
             }
-        } else {
-            console.error('Google OAuth2 not loaded yet');
-            // Fallback: wait a bit and retry
-            setTimeout(() => {
-                if (window.google?.accounts?.oauth2) {
-                    loginWithGoogle();
-                } else {
-                    alert('Google Sign-In is not available. Please refresh the page and try again.');
-                }
-            }, 1000);
+        });
+
+        if (error) {
+            console.error('Google OAuth error:', error);
         }
     }, []);
 
-    useEffect(() => {
-        // Check for existing session
-        const savedUser = localStorage.getItem('budgetown-current-user');
-        if (savedUser) {
-            try {
-                setUser(JSON.parse(savedUser));
-            } catch (e) {
-                localStorage.removeItem('budgetown-current-user');
-            }
-        }
-        setLoading(false);
-    }, []);
-
-    const register = (username, email, password) => {
-        // Check if user already exists
-        const existingUsers = JSON.parse(localStorage.getItem('budgetown-users') || '{}');
-
-        if (existingUsers[email]) {
-            throw new Error('Email already registered');
-        }
-
-        // Create new user
-        const newUser = {
-            id: Date.now().toString(),
-            username,
+    // Register with email/password
+    const register = async (username, email, password) => {
+        const { data, error } = await supabase.auth.signUp({
             email,
-            provider: 'local',
-            createdAt: new Date().toISOString()
-        };
+            password,
+            options: {
+                data: {
+                    full_name: username,
+                }
+            }
+        });
 
-        // Store user credentials (password hashed in production)
-        existingUsers[email] = {
-            ...newUser,
-            password: btoa(password) // Simple encoding, use proper hashing in production
-        };
-        localStorage.setItem('budgetown-users', JSON.stringify(existingUsers));
-
-        // Initialize user data storage
-        localStorage.setItem(`budgetown-data-${newUser.id}`, JSON.stringify({
-            transactions: [],
-            budgets: {},
-            startingBalance: 0,
-            merchantCategories: {}
-        }));
-
-        // Log in the user
-        setUser(newUser);
-        localStorage.setItem('budgetown-current-user', JSON.stringify(newUser));
-
-        return newUser;
+        if (error) throw new Error(error.message);
+        return data.user;
     };
 
-    const login = (email, password) => {
-        const existingUsers = JSON.parse(localStorage.getItem('budgetown-users') || '{}');
-        const userData = existingUsers[email];
+    // Login with email/password
+    const login = async (email, password) => {
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
 
-        if (!userData) {
-            throw new Error('User not found');
-        }
-
-        // Check if this is a Google user trying to login with password
-        if (userData.provider === 'google' && !userData.password) {
-            throw new Error('This account uses Google Sign-In. Please use the Google button to login.');
-        }
-
-        if (userData.password !== btoa(password)) {
-            throw new Error('Invalid password');
-        }
-
-        const { password: _, ...userWithoutPassword } = userData;
-        setUser(userWithoutPassword);
-        localStorage.setItem('budgetown-current-user', JSON.stringify(userWithoutPassword));
-
-        return userWithoutPassword;
+        if (error) throw new Error(error.message);
+        return data.user;
     };
 
-    const logout = () => {
+    // Logout
+    const logout = async () => {
+        await supabase.auth.signOut();
         setUser(null);
-        localStorage.removeItem('budgetown-current-user');
-        // Also revoke Google token if applicable
+        setProfile(null);
         if (window.google?.accounts?.id) {
             window.google.accounts.id.disableAutoSelect();
         }
     };
 
-    const updateUser = (updates) => {
-        const updatedUser = { ...user, ...updates };
-        setUser(updatedUser);
-        localStorage.setItem('budgetown-current-user', JSON.stringify(updatedUser));
+    // Update user profile
+    const updateUser = async (updates) => {
+        if (!user) return;
 
-        // Update in users list too
-        const existingUsers = JSON.parse(localStorage.getItem('budgetown-users') || '{}');
-        if (existingUsers[user.email]) {
-            existingUsers[user.email] = { ...existingUsers[user.email], ...updates };
-            localStorage.setItem('budgetown-users', JSON.stringify(existingUsers));
+        // Update Supabase auth metadata
+        if (updates.username) {
+            await supabase.auth.updateUser({
+                data: { full_name: updates.username }
+            });
         }
+
+        // Update profile in database
+        const updatedProfile = await updateProfileDb(user.id, updates);
+        if (updatedProfile) {
+            setProfile(updatedProfile);
+        }
+
+        // Update local user state
+        setUser(prev => ({ ...prev, ...updates }));
     };
 
     return (
         <AuthContext.Provider value={{
             user,
+            profile,
             loading,
             register,
             login,
             loginWithGoogle,
             logout,
             updateUser,
+            fetchProfile,
             isAuthenticated: !!user,
-            googleReady
+            googleReady,
+            isNewUser: profile && !profile.onboarding_completed,
         }}>
             {children}
         </AuthContext.Provider>
@@ -286,4 +202,3 @@ export function useAuth() {
     }
     return context;
 }
-
