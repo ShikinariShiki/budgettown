@@ -1,30 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { addTransaction, updateTransaction, getUserData, setStartingBalance } from '../utils/storage';
+import { addTransaction, updateTransaction, getUserData, setStartingBalance, getWallets, setWalletBalance } from '../utils/storage';
 import { getCategoriesByType, formatNumber, parseFormattedNumber } from '../utils/categories';
 import { X, Save, Wallet, Banknote, CreditCard } from 'lucide-react';
 
-const PAYMENT_METHODS = [
-    { id: 'cash', label: 'Tunai', icon: Banknote, color: '#22c55e' },
-    { id: 'bca', label: 'BCA', icon: CreditCard, color: '#004B93' },
-    { id: 'bni', label: 'BNI', icon: CreditCard, color: '#F5821F' },
-];
 
 export default function TransactionForm({ onClose, editTransaction = null, onSuccess }) {
     const { user } = useAuth();
     const { t, isIndonesian } = useLanguage();
     const data = getUserData(user.id);
+    const wallets = useMemo(() => getWallets(user.id), [user.id]);
 
     const [type, setType] = useState(editTransaction?.type || 'expense');
     const [amount, setAmount] = useState(editTransaction?.amount?.toString() || '');
     const [displayAmount, setDisplayAmount] = useState(editTransaction?.amount ? formatNumber(editTransaction.amount) : '');
     const [category, setCategory] = useState(editTransaction?.category || '');
-    const [paymentMethod, setPaymentMethod] = useState(editTransaction?.payment_method || 'cash');
+    const [paymentMethod, setPaymentMethod] = useState(editTransaction?.payment_method || wallets[0]?.id || 'cash');
     const [description, setDescription] = useState(editTransaction?.description || '');
     const [date, setDate] = useState(editTransaction?.date || new Date().toISOString().split('T')[0]);
-    const [showStartingBalance, setShowStartingBalance] = useState(false);
-    const [startingBalanceAmount, setStartingBalanceAmount] = useState(data.startingBalance?.toString() || '0');
+    const [showWalletBalance, setShowWalletBalance] = useState(false);
+    const [selectedWalletForBalance, setSelectedWalletForBalance] = useState('');
+    const [walletBalanceAmount, setWalletBalanceAmount] = useState('');
     const [error, setError] = useState('');
 
     const categories = getCategoriesByType(type);
@@ -190,29 +187,28 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
 
                         {/* Right column */}
                         <div className="flex-1 space-y-4 mt-4 lg:mt-0">
-                            {/* Payment Method */}
+                            {/* Wallet Selection */}
                             <div className="space-y-1">
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Payment</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {isIndonesian ? 'Dompet' : 'Wallet'}
+                                </label>
                                 <div className="grid grid-cols-3 gap-1.5">
-                                    {PAYMENT_METHODS.map((method) => {
-                                        const Icon = method.icon;
-                                        return (
-                                            <button
-                                                key={method.id}
-                                                type="button"
-                                                onClick={() => setPaymentMethod(method.id)}
-                                                className={`p-2 rounded-lg flex flex-col items-center gap-0.5 transition-all ${paymentMethod === method.id
-                                                    ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-500/20'
-                                                    : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
-                                                    }`}
-                                            >
-                                                <Icon size={18} style={{ color: method.color }} />
-                                                <span className="text-[10px] text-gray-600 dark:text-gray-300">
-                                                    {method.label}
-                                                </span>
-                                            </button>
-                                        );
-                                    })}
+                                    {wallets.map((wallet) => (
+                                        <button
+                                            key={wallet.id}
+                                            type="button"
+                                            onClick={() => setPaymentMethod(wallet.id)}
+                                            className={`p-2 rounded-lg flex flex-col items-center gap-0.5 transition-all ${paymentMethod === wallet.id
+                                                ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-500/20'
+                                                : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
+                                                }`}
+                                        >
+                                            <span className="text-lg">{wallet.icon}</span>
+                                            <span className="text-[10px] text-gray-600 dark:text-gray-300 truncate w-full text-center">
+                                                {wallet.name}
+                                            </span>
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 

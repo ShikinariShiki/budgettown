@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getUserData, calculateBalance } from '../utils/storage';
+import { getUserData, calculateBalance, calculateAllWalletBalances, getTotalBalance } from '../utils/storage';
 import { getCategoryById } from '../utils/categories';
 import {
     TrendingUp,
@@ -23,9 +23,10 @@ const getFirstName = (fullName) => {
 
 export default function Dashboard({ onAddTransaction, onUploadScreenshot }) {
     const { user } = useAuth();
-    const { t, getGreeting, getFinancialTip } = useLanguage();
+    const { t, getGreeting, getFinancialTip, isIndonesian } = useLanguage();
     const data = getUserData(user.id);
-    const balance = calculateBalance(user.id);
+    const walletBalances = useMemo(() => calculateAllWalletBalances(user.id), [user.id, data.transactions]);
+    const balance = useMemo(() => getTotalBalance(user.id), [user.id, data.transactions]);
     const firstName = getFirstName(user.username);
 
     const currentMonth = new Date().getMonth();
@@ -123,7 +124,9 @@ export default function Dashboard({ onAddTransaction, onUploadScreenshot }) {
                     <div className="p-3 rounded-xl bg-primary-100 dark:bg-primary-500/20">
                         <Wallet size={24} className="text-primary-600 dark:text-primary-400" />
                     </div>
-                    <span className="text-gray-500 dark:text-gray-400 font-medium">{t('dashboard.currentBalance')}</span>
+                    <span className="text-gray-500 dark:text-gray-400 font-medium">
+                        {isIndonesian ? 'Total Saldo' : 'Total Balance'}
+                    </span>
                 </div>
                 <p className={`text-4xl sm:text-5xl font-bold mb-2 ${balance < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
                     {formatCurrency(balance)}
@@ -131,6 +134,26 @@ export default function Dashboard({ onAddTransaction, onUploadScreenshot }) {
                 <p className="text-gray-400 dark:text-gray-500 text-sm">
                     {balance >= 0 ? t('dashboard.availableToSpend') : t('dashboard.inTheRed')}
                 </p>
+            </div>
+
+            {/* Wallet Balances Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {walletBalances.map((wallet) => (
+                    <div
+                        key={wallet.id}
+                        className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700"
+                    >
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="text-xl">{wallet.icon}</span>
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400 truncate">
+                                {wallet.name}
+                            </span>
+                        </div>
+                        <p className={`text-lg font-bold ${wallet.currentBalance < 0 ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
+                            {formatCurrency(wallet.currentBalance)}
+                        </p>
+                    </div>
+                ))}
             </div>
 
             {/* Financial Tip Card */}

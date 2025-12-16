@@ -30,7 +30,12 @@ export const getDefaultData = () => ({
     startingBalance: 0,
     merchantCategories: {},
     geminiApiKey: '',
-    fixedCosts: []
+    fixedCosts: [],
+    wallets: [
+        { id: 'cash', name: 'Tunai', icon: '💵', color: '#22c55e', balance: 0 },
+        { id: 'bca', name: 'BCA', icon: '🏦', color: '#004B93', balance: 0 },
+        { id: 'bni', name: 'BNI', icon: '🏦', color: '#F5821F', balance: 0 },
+    ]
 });
 
 // Transaction helpers
@@ -167,4 +172,88 @@ export const deleteFixedCost = (userId, costId) => {
 export const getTotalFixedCosts = (userId) => {
     const costs = getFixedCosts(userId);
     return costs.reduce((total, cost) => total + (cost.amount || 0), 0);
+};
+
+// Wallet helpers
+export const getWallets = (userId) => {
+    const data = getUserData(userId);
+    // Migrate old data if wallets don't exist
+    if (!data.wallets || data.wallets.length === 0) {
+        data.wallets = [
+            { id: 'cash', name: 'Tunai', icon: '💵', color: '#22c55e', balance: data.startingBalance || 0 },
+            { id: 'bca', name: 'BCA', icon: '🏦', color: '#004B93', balance: 0 },
+            { id: 'bni', name: 'BNI', icon: '🏦', color: '#F5821F', balance: 0 },
+        ];
+        saveUserData(userId, data);
+    }
+    return data.wallets;
+};
+
+export const addWallet = (userId, wallet) => {
+    const data = getUserData(userId);
+    if (!data.wallets) data.wallets = [];
+    const newWallet = {
+        ...wallet,
+        id: wallet.id || Date.now().toString(),
+        balance: wallet.balance || 0,
+    };
+    data.wallets.push(newWallet);
+    saveUserData(userId, data);
+    return newWallet;
+};
+
+export const updateWallet = (userId, walletId, updates) => {
+    const data = getUserData(userId);
+    const index = data.wallets?.findIndex(w => w.id === walletId);
+    if (index !== -1) {
+        data.wallets[index] = { ...data.wallets[index], ...updates };
+        saveUserData(userId, data);
+        return data.wallets[index];
+    }
+    return null;
+};
+
+export const deleteWallet = (userId, walletId) => {
+    const data = getUserData(userId);
+    data.wallets = data.wallets?.filter(w => w.id !== walletId) || [];
+    saveUserData(userId, data);
+};
+
+export const setWalletBalance = (userId, walletId, balance) => {
+    const data = getUserData(userId);
+    const wallet = data.wallets?.find(w => w.id === walletId);
+    if (wallet) {
+        wallet.balance = balance;
+        saveUserData(userId, data);
+    }
+};
+
+// Calculate balance per wallet from transactions
+export const calculateWalletBalance = (userId, walletId) => {
+    const data = getUserData(userId);
+    const wallet = data.wallets?.find(w => w.id === walletId);
+    const startingBalance = wallet?.balance || 0;
+
+    const transactionTotal = data.transactions
+        .filter(t => t.payment_method === walletId || t.wallet === walletId)
+        .reduce((acc, t) => {
+            return t.type === 'income' ? acc + t.amount : acc - t.amount;
+        }, 0);
+
+    return startingBalance + transactionTotal;
+};
+
+// Calculate all wallet balances
+export const calculateAllWalletBalances = (userId) => {
+    const wallets = getWallets(userId);
+    return wallets.map(wallet => ({
+        ...wallet,
+        currentBalance: calculateWalletBalance(userId, wallet.id)
+    }));
+};
+
+// Get total balance across all wallets
+export const getTotalBalance = (userId) => {
+    const balances = calculateAllWalletBalances(userId);
+    return balances.reduce((total, w) => total + w.currentBalance, 0);
 };
