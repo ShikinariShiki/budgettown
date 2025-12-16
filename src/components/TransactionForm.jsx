@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { addTransaction, updateTransaction, getUserData, getWallets } from '../utils/storage';
-import { getCategoriesByType, formatNumber, parseFormattedNumber } from '../utils/categories';
-import { X, Save, Wallet, Banknote, CreditCard } from 'lucide-react';
+import { getCategoriesByType, formatNumber } from '../utils/categories';
+import { X, Save } from 'lucide-react';
 
 
 export default function TransactionForm({ onClose, editTransaction = null, onSuccess }) {
@@ -19,9 +19,6 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
     const [paymentMethod, setPaymentMethod] = useState(editTransaction?.payment_method || wallets[0]?.id || 'cash');
     const [description, setDescription] = useState(editTransaction?.description || '');
     const [date, setDate] = useState(editTransaction?.date || new Date().toISOString().split('T')[0]);
-    const [showWalletBalance, setShowWalletBalance] = useState(false);
-    const [selectedWalletForBalance, setSelectedWalletForBalance] = useState('');
-    const [walletBalanceAmount, setWalletBalanceAmount] = useState('');
     const [error, setError] = useState('');
 
     const categories = getCategoriesByType(type);
@@ -231,14 +228,6 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
                     <div className="flex gap-2 pt-4 border-t border-gray-100 dark:border-gray-700 mt-4">
                         <button
                             type="button"
-                            onClick={() => setShowStartingBalance(true)}
-                            className="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                            title="Set starting balance"
-                        >
-                            <Wallet size={18} className="text-gray-600 dark:text-gray-300" />
-                        </button>
-                        <button
-                            type="button"
                             onClick={onClose}
                             className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all text-sm"
                         >
@@ -257,43 +246,7 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
                     </div>
                 </form>
 
-                {/* Starting Balance Modal */}
-                {showStartingBalance && (
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Set Starting Balance</h3>
-                            <form onSubmit={handleStartingBalance} className="space-y-4">
-                                <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">Rp</span>
-                                    <input
-                                        type="number"
-                                        value={startingBalanceAmount}
-                                        onChange={(e) => setStartingBalanceAmount(e.target.value)}
-                                        onWheel={(e) => e.target.blur()}
-                                        className="w-full pl-12 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
-                                        placeholder="0"
-                                        step="any"
-                                    />
-                                </div>
-                                <div className="flex gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowStartingBalance(false)}
-                                        className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="flex-1 py-2.5 rounded-xl gradient-primary text-white font-medium"
-                                    >
-                                        Save
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                )}
+
             </div>
         </div>
     );
