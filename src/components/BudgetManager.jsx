@@ -134,6 +134,7 @@ export default function BudgetManager() {
                                                         type="number"
                                                         value={editAmount}
                                                         onChange={(e) => setEditAmount(e.target.value)}
+                                                        onWheel={(e) => e.target.blur()}
                                                         className="w-32 pl-10 pr-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white text-sm"
                                                         placeholder="0"
                                                         autoFocus
@@ -184,10 +185,10 @@ export default function BudgetManager() {
                                 <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                                     <div
                                         className={`h-full rounded-full transition-all duration-500 ${budgetInfo.status === 'exceeded'
-                                                ? 'bg-red-500'
-                                                : budgetInfo.status === 'warning'
-                                                    ? 'bg-yellow-500'
-                                                    : 'bg-green-500'
+                                            ? 'bg-red-500'
+                                            : budgetInfo.status === 'warning'
+                                                ? 'bg-yellow-500'
+                                                : 'bg-green-500'
                                             }`}
                                         style={{ width: `${Math.min(budgetInfo.percentage, 100)}%` }}
                                     />

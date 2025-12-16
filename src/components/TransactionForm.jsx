@@ -103,8 +103,8 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
                             type="button"
                             onClick={() => setType('expense')}
                             className={`flex-1 py-2.5 rounded-lg font-medium transition-all ${type === 'expense'
-                                    ? 'bg-red-500 text-white shadow-lg'
-                                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                ? 'bg-red-500 text-white shadow-lg'
+                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                                 }`}
                         >
                             Expense
@@ -113,8 +113,8 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
                             type="button"
                             onClick={() => setType('income')}
                             className={`flex-1 py-2.5 rounded-lg font-medium transition-all ${type === 'income'
-                                    ? 'bg-green-500 text-white shadow-lg'
-                                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                ? 'bg-green-500 text-white shadow-lg'
+                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                                 }`}
                         >
                             Income
@@ -130,6 +130,7 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
                                 type="number"
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
+                                onWheel={(e) => e.target.blur()}
                                 className="w-full pl-12 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white focus:border-primary-500"
                                 placeholder="0"
                                 min="0"
@@ -149,8 +150,8 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
                                     type="button"
                                     onClick={() => setCategory(cat.id)}
                                     className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${category === cat.id
-                                            ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-500/20'
-                                            : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
+                                        ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-500/20'
+                                        : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
                                         }`}
                                 >
                                     <span className="text-xl">{cat.icon}</span>
@@ -206,8 +207,8 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
                         <button
                             type="submit"
                             className={`flex-1 py-3 rounded-xl text-white font-medium shadow-lg transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2 ${type === 'expense'
-                                    ? 'gradient-danger shadow-red-500/30'
-                                    : 'gradient-primary shadow-primary-500/30'
+                                ? 'gradient-danger shadow-red-500/30'
+                                : 'gradient-primary shadow-primary-500/30'
                                 }`}
                         >
                             <Save size={20} />
@@ -228,6 +229,7 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
                                         type="number"
                                         value={startingBalanceAmount}
                                         onChange={(e) => setStartingBalanceAmount(e.target.value)}
+                                        onWheel={(e) => e.target.blur()}
                                         className="w-full pl-12 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                                         placeholder="0"
                                         step="any"
