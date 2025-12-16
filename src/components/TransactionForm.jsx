@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { addTransaction, updateTransaction, getUserData, setStartingBalance } from '../utils/storage';
-import { getCategoriesByType } from '../utils/categories';
+import { getCategoriesByType, formatNumber, parseFormattedNumber } from '../utils/categories';
 import { X, Save, Wallet, Banknote, CreditCard } from 'lucide-react';
 
 const PAYMENT_METHODS = [
@@ -12,10 +13,12 @@ const PAYMENT_METHODS = [
 
 export default function TransactionForm({ onClose, editTransaction = null, onSuccess }) {
     const { user } = useAuth();
+    const { t, isIndonesian } = useLanguage();
     const data = getUserData(user.id);
 
     const [type, setType] = useState(editTransaction?.type || 'expense');
     const [amount, setAmount] = useState(editTransaction?.amount?.toString() || '');
+    const [displayAmount, setDisplayAmount] = useState(editTransaction?.amount ? formatNumber(editTransaction.amount) : '');
     const [category, setCategory] = useState(editTransaction?.category || '');
     const [paymentMethod, setPaymentMethod] = useState(editTransaction?.payment_method || 'cash');
     const [description, setDescription] = useState(editTransaction?.description || '');
@@ -25,6 +28,13 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
     const [error, setError] = useState('');
 
     const categories = getCategoriesByType(type);
+
+    // Handle amount input with thousand separators
+    const handleAmountChange = (e) => {
+        const value = e.target.value.replace(/[^\d]/g, ''); // Only digits
+        setAmount(value);
+        setDisplayAmount(value ? formatNumber(parseInt(value)) : '');
+    };
 
     useEffect(() => {
         // Reset category when type changes
@@ -136,18 +146,17 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
 
                             {/* Amount */}
                             <div className="space-y-1">
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Amount</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {isIndonesian ? 'Jumlah' : 'Amount'}
+                                </label>
                                 <div className="relative">
                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">Rp</span>
                                     <input
-                                        type="number"
-                                        value={amount}
-                                        onChange={(e) => setAmount(e.target.value)}
-                                        onWheel={(e) => e.target.blur()}
+                                        type="text"
+                                        value={displayAmount}
+                                        onChange={handleAmountChange}
                                         className="w-full pl-12 pr-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white focus:border-primary-500"
                                         placeholder="0"
-                                        min="0"
-                                        step="any"
                                         required
                                     />
                                 </div>
@@ -155,8 +164,10 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
 
                             {/* Category */}
                             <div className="space-y-1">
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
-                                <div className="grid grid-cols-5 gap-1.5">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {isIndonesian ? 'Kategori' : 'Category'}
+                                </label>
+                                <div className="grid grid-cols-4 lg:grid-cols-6 gap-1.5">
                                     {categories.map((cat) => (
                                         <button
                                             key={cat.id}
@@ -169,7 +180,7 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
                                         >
                                             <span className="text-lg">{cat.icon}</span>
                                             <span className="text-[10px] text-gray-600 dark:text-gray-300 truncate w-full text-center">
-                                                {cat.name.split(' ')[0]}
+                                                {t(`categories.${cat.nameKey}`)}
                                             </span>
                                         </button>
                                     ))}
