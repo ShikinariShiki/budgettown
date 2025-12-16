@@ -1,0 +1,128 @@
+// User-scoped storage utility
+export const getStorageKey = (userId) => `budgetown-data-${userId}`;
+
+export const getUserData = (userId) => {
+    try {
+        const data = localStorage.getItem(getStorageKey(userId));
+        if (!data) {
+            return getDefaultData();
+        }
+        return JSON.parse(data);
+    } catch (e) {
+        console.error('Error reading user data:', e);
+        return getDefaultData();
+    }
+};
+
+export const saveUserData = (userId, data) => {
+    try {
+        localStorage.setItem(getStorageKey(userId), JSON.stringify(data));
+        return true;
+    } catch (e) {
+        console.error('Error saving user data:', e);
+        return false;
+    }
+};
+
+export const getDefaultData = () => ({
+    transactions: [],
+    budgets: {},
+    startingBalance: 0,
+    merchantCategories: {},
+    geminiApiKey: ''
+});
+
+// Transaction helpers
+export const addTransaction = (userId, transaction) => {
+    const data = getUserData(userId);
+    const newTransaction = {
+        ...transaction,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString()
+    };
+    data.transactions.unshift(newTransaction);
+    saveUserData(userId, data);
+    return newTransaction;
+};
+
+export const updateTransaction = (userId, transactionId, updates) => {
+    const data = getUserData(userId);
+    const index = data.transactions.findIndex(t => t.id === transactionId);
+    if (index !== -1) {
+        data.transactions[index] = { ...data.transactions[index], ...updates };
+        saveUserData(userId, data);
+        return data.transactions[index];
+    }
+    return null;
+};
+
+export const deleteTransaction = (userId, transactionId) => {
+    const data = getUserData(userId);
+    data.transactions = data.transactions.filter(t => t.id !== transactionId);
+    saveUserData(userId, data);
+};
+
+// Balance calculation
+export const calculateBalance = (userId) => {
+    const data = getUserData(userId);
+    const transactionTotal = data.transactions.reduce((acc, t) => {
+        return t.type === 'income' ? acc + t.amount : acc - t.amount;
+    }, 0);
+    return data.startingBalance + transactionTotal;
+};
+
+// Budget helpers
+export const setBudget = (userId, category, amount) => {
+    const data = getUserData(userId);
+    data.budgets[category] = amount;
+    saveUserData(userId, data);
+};
+
+export const getBudgetSpent = (userId, category, month, year) => {
+    const data = getUserData(userId);
+    return data.transactions
+        .filter(t => {
+            const tDate = new Date(t.date);
+            return t.type === 'expense' &&
+                t.category === category &&
+                tDate.getMonth() === month &&
+                tDate.getFullYear() === year;
+        })
+        .reduce((acc, t) => acc + t.amount, 0);
+};
+
+// Starting balance
+export const getStartingBalance = (userId) => {
+    const data = getUserData(userId);
+    return data.startingBalance || 0;
+};
+
+export const setStartingBalance = (userId, amount) => {
+    const data = getUserData(userId);
+    data.startingBalance = amount;
+    saveUserData(userId, data);
+};
+
+// API Key storage
+export const getGeminiApiKey = (userId) => {
+    const data = getUserData(userId);
+    return data.geminiApiKey || '';
+};
+
+export const setGeminiApiKey = (userId, apiKey) => {
+    const data = getUserData(userId);
+    data.geminiApiKey = apiKey;
+    saveUserData(userId, data);
+};
+
+// Merchant category mapping
+export const saveMerchantCategory = (userId, merchant, category) => {
+    const data = getUserData(userId);
+    data.merchantCategories[merchant.toLowerCase()] = category;
+    saveUserData(userId, data);
+};
+
+export const getMerchantCategory = (userId, merchant) => {
+    const data = getUserData(userId);
+    return data.merchantCategories[merchant.toLowerCase()] || null;
+};
