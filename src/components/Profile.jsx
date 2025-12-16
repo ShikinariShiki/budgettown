@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { getStartingBalance, setStartingBalance } from '../utils/storage';
-import { User, Mail, Calendar, Wallet, Moon, Sun, Monitor, Camera, Save, Check, Loader2 } from 'lucide-react';
+import { User, Mail, Calendar, Wallet, Moon, Sun, Monitor, Camera, Save, Check, Loader2, Globe } from 'lucide-react';
 
 export default function Profile() {
     const { user, updateUser } = useAuth();
     const { theme, setTheme } = useTheme();
+    const { language, setLanguage, t } = useLanguage();
     const [username, setUsername] = useState(user.username);
     const [startBalance, setStartBalance] = useState(getStartingBalance(user.id));
     const [currency, setCurrency] = useState(user.currency || 'IDR');
@@ -131,6 +133,21 @@ export default function Profile() {
                                 <option value="GBP">🇬🇧 British Pound (£)</option>
                                 <option value="JPY">🇯🇵 Japanese Yen (¥)</option>
                                 <option value="SGD">🇸🇬 Singapore Dollar (S$)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-2">
+                                <Globe size={16} />
+                                {t('profile.language')}
+                            </label>
+                            <select
+                                value={language}
+                                onChange={(e) => setLanguage(e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
+                            >
+                                <option value="en">🇺🇸 English</option>
+                                <option value="id">🇮🇩 Bahasa Indonesia</option>
                             </select>
                         </div>
                     </div>

@@ -29,7 +29,8 @@ export const getDefaultData = () => ({
     budgets: {},
     startingBalance: 0,
     merchantCategories: {},
-    geminiApiKey: ''
+    geminiApiKey: '',
+    fixedCosts: []
 });
 
 // Transaction helpers
@@ -125,4 +126,45 @@ export const saveMerchantCategory = (userId, merchant, category) => {
 export const getMerchantCategory = (userId, merchant) => {
     const data = getUserData(userId);
     return data.merchantCategories[merchant.toLowerCase()] || null;
+};
+
+// Fixed Costs helpers
+export const getFixedCosts = (userId) => {
+    const data = getUserData(userId);
+    return data.fixedCosts || [];
+};
+
+export const addFixedCost = (userId, fixedCost) => {
+    const data = getUserData(userId);
+    if (!data.fixedCosts) data.fixedCosts = [];
+    const newCost = {
+        ...fixedCost,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString()
+    };
+    data.fixedCosts.push(newCost);
+    saveUserData(userId, data);
+    return newCost;
+};
+
+export const updateFixedCost = (userId, costId, updates) => {
+    const data = getUserData(userId);
+    const index = data.fixedCosts?.findIndex(c => c.id === costId);
+    if (index !== -1) {
+        data.fixedCosts[index] = { ...data.fixedCosts[index], ...updates };
+        saveUserData(userId, data);
+        return data.fixedCosts[index];
+    }
+    return null;
+};
+
+export const deleteFixedCost = (userId, costId) => {
+    const data = getUserData(userId);
+    data.fixedCosts = data.fixedCosts?.filter(c => c.id !== costId) || [];
+    saveUserData(userId, data);
+};
+
+export const getTotalFixedCosts = (userId) => {
+    const costs = getFixedCosts(userId);
+    return costs.reduce((total, cost) => total + (cost.amount || 0), 0);
 };

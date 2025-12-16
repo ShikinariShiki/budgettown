@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { useTheme } from './contexts/ThemeContext';
+import { useLanguage } from './contexts/LanguageContext';
 import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
@@ -8,14 +9,16 @@ import TransactionForm from './components/TransactionForm';
 import TransactionList from './components/TransactionList';
 import Charts from './components/Charts';
 import BudgetManager from './components/BudgetManager';
+import FixedCosts from './components/FixedCosts';
 import ScreenshotUpload from './components/ScreenshotUpload';
 import SpreadsheetTools from './components/SpreadsheetTools';
 import Profile from './components/Profile';
-import { Home, List, BarChart3, Target, FileSpreadsheet, LogOut, Sun, Moon, Menu, X, User } from 'lucide-react';
+import { Home, List, BarChart3, Target, FileSpreadsheet, LogOut, Sun, Moon, Menu, X, User, CalendarClock } from 'lucide-react';
 
 function App() {
     const { user, loading, logout, isAuthenticated } = useAuth();
     const { theme, toggleTheme } = useTheme();
+    const { t } = useLanguage();
     const [authView, setAuthView] = useState('login');
     const [currentView, setCurrentView] = useState('dashboard');
     const [showTransactionForm, setShowTransactionForm] = useState(false);
@@ -50,12 +53,13 @@ function App() {
     }
 
     const navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: Home },
-        { id: 'transactions', label: 'Transactions', icon: List },
-        { id: 'charts', label: 'Analytics', icon: BarChart3 },
-        { id: 'budgets', label: 'Budgets', icon: Target },
-        { id: 'spreadsheet', label: 'Spreadsheet', icon: FileSpreadsheet },
-        { id: 'profile', label: 'Profile', icon: User },
+        { id: 'dashboard', labelKey: 'nav.dashboard', icon: Home },
+        { id: 'transactions', labelKey: 'nav.transactions', icon: List },
+        { id: 'charts', labelKey: 'nav.analytics', icon: BarChart3 },
+        { id: 'budgets', labelKey: 'nav.budgets', icon: Target },
+        { id: 'fixedcosts', labelKey: 'nav.fixedCosts', icon: CalendarClock },
+        { id: 'spreadsheet', labelKey: 'nav.spreadsheet', icon: FileSpreadsheet },
+        { id: 'profile', labelKey: 'nav.profile', icon: User },
     ];
 
     return (
@@ -129,13 +133,13 @@ function App() {
                                 key={item.id}
                                 onClick={() => setCurrentView(item.id)}
                                 className={`nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${currentView === item.id
-                                        ? 'bg-primary-50 dark:bg-primary-500/20 text-primary-600 dark:text-primary-400 active'
-                                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50'
+                                    ? 'bg-primary-50 dark:bg-primary-500/20 text-primary-600 dark:text-primary-400 active'
+                                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50'
                                     }`}
                                 style={{ animationDelay: `${index * 0.05}s` }}
                             >
                                 <item.icon size={20} />
-                                {item.label}
+                                {t(item.labelKey)}
                             </button>
                         ))}
                     </nav>
@@ -177,8 +181,8 @@ function App() {
                                         key={item.id}
                                         onClick={() => { setCurrentView(item.id); setMobileMenuOpen(false); }}
                                         className={`nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${currentView === item.id
-                                                ? 'bg-primary-50 dark:bg-primary-500/20 text-primary-600 dark:text-primary-400 active'
-                                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50'
+                                            ? 'bg-primary-50 dark:bg-primary-500/20 text-primary-600 dark:text-primary-400 active'
+                                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50'
                                             }`}
                                         style={{ animationDelay: `${index * 0.05}s` }}
                                     >
@@ -198,6 +202,7 @@ function App() {
                         {currentView === 'transactions' && <TransactionList onEdit={(t) => { setEditingTransaction(t); setShowTransactionForm(true); }} onRefresh={refresh} />}
                         {currentView === 'charts' && <Charts />}
                         {currentView === 'budgets' && <BudgetManager />}
+                        {currentView === 'fixedcosts' && <FixedCosts />}
                         {currentView === 'spreadsheet' && <SpreadsheetTools onSuccess={refresh} />}
                         {currentView === 'profile' && <Profile />}
                     </div>
