@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getFixedCosts, addFixedCost, updateFixedCost, deleteFixedCost, getTotalFixedCosts } from '../utils/storage';
-import { Receipt, Plus, Edit2, Trash2, Check, X, Home, Zap, Shield, Tv, CreditCard, Package } from 'lucide-react';
+import { Receipt, Plus, Edit2, Trash2, Check, X, Home, Zap, Shield, Tv, CreditCard, Package, Calendar } from 'lucide-react';
 
 const FIXED_COST_CATEGORIES = [
     { id: 'rent', icon: Home, color: '#3b82f6' },
@@ -13,9 +13,19 @@ const FIXED_COST_CATEGORIES = [
     { id: 'other', icon: Package, color: '#6b7280' },
 ];
 
+const FREQUENCY_OPTIONS = [
+    { id: 'monthly', labelKey: 'frequency.monthly' },
+    { id: 'weekly', labelKey: 'frequency.weekly' },
+    { id: 'biweekly', labelKey: 'frequency.biweekly' },
+    { id: 'triweekly', labelKey: 'frequency.triweekly' },
+    { id: 'bimonthly', labelKey: 'frequency.bimonthly' },
+    { id: 'quarterly', labelKey: 'frequency.quarterly' },
+    { id: 'yearly', labelKey: 'frequency.yearly' },
+];
+
 export default function FixedCosts() {
     const { user } = useAuth();
-    const { t } = useLanguage();
+    const { t, isIndonesian } = useLanguage();
     const [costs, setCosts] = useState(() => getFixedCosts(user.id));
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -23,6 +33,7 @@ export default function FixedCosts() {
         name: '',
         amount: '',
         category: 'other',
+        frequency: 'monthly',
         dueDate: '',
         notes: ''
     });
@@ -50,6 +61,7 @@ export default function FixedCosts() {
             name: formData.name,
             amount,
             category: formData.category,
+            frequency: formData.frequency,
             dueDate: formData.dueDate,
             notes: formData.notes
         };
@@ -69,6 +81,7 @@ export default function FixedCosts() {
             name: cost.name,
             amount: cost.amount.toString(),
             category: cost.category,
+            frequency: cost.frequency || 'monthly',
             dueDate: cost.dueDate || '',
             notes: cost.notes || ''
         });
@@ -82,7 +95,7 @@ export default function FixedCosts() {
     };
 
     const resetForm = () => {
-        setFormData({ name: '', amount: '', category: 'other', dueDate: '', notes: '' });
+        setFormData({ name: '', amount: '', category: 'other', frequency: 'monthly', dueDate: '', notes: '' });
         setEditingId(null);
         setShowForm(false);
     };
@@ -153,7 +166,12 @@ export default function FixedCosts() {
                                         </p>
                                         <p className="text-sm text-gray-500 dark:text-gray-400">
                                             {t(`fixedCosts.${cost.category}`)}
-                                            {cost.dueDate && ` • Due: ${cost.dueDate}`}
+                                            {cost.frequency && cost.frequency !== 'monthly' && (
+                                                <span className="ml-1 px-1.5 py-0.5 rounded bg-primary-100 dark:bg-primary-500/20 text-primary-600 dark:text-primary-400 text-xs">
+                                                    {t(`frequency.${cost.frequency}`)}
+                                                </span>
+                                            )}
+                                            {cost.dueDate && ` • ${cost.dueDate}`}
                                         </p>
                                     </div>
                                     <p className="font-semibold text-gray-900 dark:text-white">
@@ -251,6 +269,24 @@ export default function FixedCosts() {
                                         );
                                     })}
                                 </div>
+                            </div>
+
+                            {/* Frequency Selector */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {isIndonesian ? 'Frekuensi' : 'Frequency'}
+                                </label>
+                                <select
+                                    value={formData.frequency}
+                                    onChange={(e) => setFormData(p => ({ ...p, frequency: e.target.value }))}
+                                    className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
+                                >
+                                    {FREQUENCY_OPTIONS.map(opt => (
+                                        <option key={opt.id} value={opt.id}>
+                                            {t(opt.labelKey)}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
 
                             <div>

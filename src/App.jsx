@@ -14,6 +14,7 @@ import ScreenshotUpload from './components/ScreenshotUpload';
 import SpreadsheetTools from './components/SpreadsheetTools';
 import Profile from './components/Profile';
 import Onboarding from './components/Onboarding';
+import WalletManager from './components/WalletManager';
 import { Home, List, BarChart3, Target, FileSpreadsheet, LogOut, Sun, Moon, Menu, X, User, CalendarClock } from 'lucide-react';
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
     const [currentView, setCurrentView] = useState('dashboard');
     const [showTransactionForm, setShowTransactionForm] = useState(false);
     const [showScreenshotUpload, setShowScreenshotUpload] = useState(false);
+    const [showWalletManager, setShowWalletManager] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState(null);
     const [refreshKey, setRefreshKey] = useState(0);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -200,7 +202,7 @@ function App() {
                 {/* Main Content */}
                 <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl relative z-10" key={refreshKey}>
                     <div className="animate-fade-in-up">
-                        {currentView === 'dashboard' && <Dashboard onAddTransaction={() => setShowTransactionForm(true)} onUploadScreenshot={() => setShowScreenshotUpload(true)} />}
+                        {currentView === 'dashboard' && <Dashboard onAddTransaction={() => setShowTransactionForm(true)} onUploadScreenshot={() => setShowScreenshotUpload(true)} onManageWallets={() => setShowWalletManager(true)} />}
                         {currentView === 'transactions' && <TransactionList onEdit={(t) => { setEditingTransaction(t); setShowTransactionForm(true); }} onRefresh={refresh} />}
                         {currentView === 'charts' && <Charts />}
                         {currentView === 'budgets' && <BudgetManager />}
@@ -225,6 +227,9 @@ function App() {
                         <ScreenshotUpload onClose={() => setShowScreenshotUpload(false)} onSuccess={refresh} />
                     </div>
                 </div>
+            )}
+            {showWalletManager && (
+                <WalletManager onClose={() => setShowWalletManager(false)} onSuccess={refresh} />
             )}
 
             {/* Onboarding for new users */}

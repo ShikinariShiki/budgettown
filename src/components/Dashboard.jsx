@@ -12,7 +12,8 @@ import {
     ArrowUpRight,
     ArrowDownRight,
     Calendar,
-    Lightbulb
+    Lightbulb,
+    Settings
 } from 'lucide-react';
 
 // Get first name from full name
@@ -21,7 +22,7 @@ const getFirstName = (fullName) => {
     return fullName.split(' ')[0];
 };
 
-export default function Dashboard({ onAddTransaction, onUploadScreenshot }) {
+export default function Dashboard({ onAddTransaction, onUploadScreenshot, onManageWallets }) {
     const { user } = useAuth();
     const { t, getGreeting, getFinancialTip, isIndonesian } = useLanguage();
     const data = getUserData(user.id);
@@ -154,6 +155,16 @@ export default function Dashboard({ onAddTransaction, onUploadScreenshot }) {
                         </p>
                     </div>
                 ))}
+                {/* Manage Wallets Button */}
+                <button
+                    onClick={onManageWallets}
+                    className="bg-white dark:bg-gray-800 rounded-xl p-4 border-2 border-dashed border-gray-200 dark:border-gray-600 flex flex-col items-center justify-center gap-2 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-500/10 transition-colors group"
+                >
+                    <Settings size={24} className="text-gray-400 group-hover:text-primary-500" />
+                    <span className="text-xs text-gray-500 group-hover:text-primary-500">
+                        {isIndonesian ? 'Kelola' : 'Manage'}
+                    </span>
+                </button>
             </div>
 
             {/* Financial Tip Card */}
