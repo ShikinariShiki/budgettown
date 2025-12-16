@@ -152,6 +152,7 @@ export default function Profile() {
                                     type="number"
                                     value={startBalance}
                                     onChange={(e) => setStartBalance(parseFloat(e.target.value) || 0)}
+                                    onWheel={(e) => e.target.blur()}
                                     className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                                 />
                             </div>
@@ -171,8 +172,8 @@ export default function Profile() {
                             key={option.id}
                             onClick={() => setTheme(option.id)}
                             className={`flex flex-col items-center gap-3 p-4 rounded-2xl border-2 transition-all duration-300 btn-hover ${theme === option.id
-                                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-500/20'
-                                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                                ? 'border-primary-500 bg-primary-50 dark:bg-primary-500/20'
+                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                                 }`}
                         >
                             <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${theme === option.id ? 'gradient-primary text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
