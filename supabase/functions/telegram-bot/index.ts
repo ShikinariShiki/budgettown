@@ -1,14 +1,20 @@
 // Supabase Edge Function: Telegram Bot Webhook
 // Deploy with: supabase functions deploy telegram-bot
+// Set secrets: supabase secrets set TELEGRAM_BOT_TOKEN=your_token_here
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN') || '8565323595:AAFU_38_6FEPrQKEt9dUBHvfYByyT92Knv8'
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || 'https://tbtnysaxrgfrvguxhzws.supabase.co'
+// Get secrets from environment - NEVER hardcode tokens!
+const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY!)
+if (!TELEGRAM_BOT_TOKEN) {
+    console.error('TELEGRAM_BOT_TOKEN not set!')
+}
+
+const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_KEY!)
 
 // Send message via Telegram
 async function sendTelegramMessage(chatId: string, text: string) {
@@ -35,7 +41,6 @@ function formatCurrency(amount: number): string {
 
 // Get user balance
 async function getUserBalance(chatId: string) {
-    // Find user by telegram_chat_id
     const { data: profile } = await supabase
         .from('profiles')
         .select('*')
@@ -44,7 +49,6 @@ async function getUserBalance(chatId: string) {
 
     if (!profile) return null
 
-    // Get transactions
     const { data: transactions } = await supabase
         .from('transactions')
         .select('*')
@@ -83,7 +87,7 @@ async function handleBalance(chatId: string) {
         return
     }
 
-    const { profile, balance } = userData
+    const { balance } = userData
     const emoji = balance >= 0 ? '💰' : '🔴'
 
     const message = `${emoji} <b>Saldo Kamu</b>
@@ -104,9 +108,8 @@ async function handleRecap(chatId: string) {
         return
     }
 
-    const { profile, balance, transactions } = userData
+    const { balance, transactions } = userData
 
-    // This month's transactions
     const now = new Date()
     const thisMonth = transactions.filter((t: any) => {
         const tDate = new Date(t.date)

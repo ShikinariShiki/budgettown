@@ -1,15 +1,20 @@
 // Supabase Edge Function: Daily Balance Notification (Cron Job)
 // Deploy with: supabase functions deploy daily-notification
-// Schedule: Run daily at 7:00 AM WIB (00:00 UTC)
+// Set secrets: supabase secrets set TELEGRAM_BOT_TOKEN=your_token_here
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN') || '8565323595:AAFU_38_6FEPrQKEt9dUBHvfYByyT92Knv8'
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || 'https://tbtnysaxrgfrvguxhzws.supabase.co'
+// Get secrets from environment - NEVER hardcode tokens!
+const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY!)
+if (!TELEGRAM_BOT_TOKEN) {
+    console.error('TELEGRAM_BOT_TOKEN not set!')
+}
+
+const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_KEY!)
 
 // Send message via Telegram
 async function sendTelegramMessage(chatId: string, text: string) {
@@ -55,14 +60,12 @@ function getMorningGreeting(name: string, balance: number): string {
 }
 
 serve(async (req) => {
-    // Verify this is a scheduled invocation or authorized request
     const authHeader = req.headers.get('Authorization')
     if (!authHeader && req.method !== 'POST') {
         return new Response('Unauthorized', { status: 401 })
     }
 
     try {
-        // Get all users with telegram_chat_id set
         const { data: profiles, error } = await supabase
             .from('profiles')
             .select('*')
@@ -78,18 +81,15 @@ serve(async (req) => {
 
         for (const profile of profiles || []) {
             try {
-                // Get user's transactions
                 const { data: transactions } = await supabase
                     .from('transactions')
                     .select('*')
                     .eq('user_id', profile.id)
 
-                // Calculate balance
                 const balance = (transactions || []).reduce((acc: number, t: any) => {
                     return t.type === 'income' ? acc + Number(t.amount) : acc - Number(t.amount)
                 }, Number(profile.starting_balance) || 0)
 
-                // Get this month's stats
                 const now = new Date()
                 const thisMonth = (transactions || []).filter((t: any) => {
                     const tDate = new Date(t.date)
