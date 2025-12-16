@@ -83,11 +83,11 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 animate-fade-in">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md lg:max-w-3xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden max-h-[95vh] flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
                         {editTransaction ? 'Edit Transaction' : 'Add Transaction'}
                     </h2>
                     <button
@@ -98,154 +98,164 @@ export default function TransactionForm({ onClose, editTransaction = null, onSuc
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-5 space-y-5">
+                <form onSubmit={handleSubmit} className="p-4 sm:p-5 overflow-y-auto flex-1">
                     {error && (
-                        <div className="p-3 rounded-xl bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 text-sm">
+                        <div className="p-3 rounded-xl bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 text-sm mb-4">
                             {error}
                         </div>
                     )}
 
-                    {/* Type Toggle */}
-                    <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-700 rounded-xl">
-                        <button
-                            type="button"
-                            onClick={() => setType('expense')}
-                            className={`flex-1 py-2.5 rounded-lg font-medium transition-all ${type === 'expense'
-                                ? 'bg-red-500 text-white shadow-lg'
-                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                                }`}
-                        >
-                            Expense
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setType('income')}
-                            className={`flex-1 py-2.5 rounded-lg font-medium transition-all ${type === 'income'
-                                ? 'bg-green-500 text-white shadow-lg'
-                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                                }`}
-                        >
-                            Income
-                        </button>
-                    </div>
+                    {/* Responsive grid: vertical on mobile, horizontal on PC */}
+                    <div className="flex flex-col lg:flex-row lg:gap-6">
 
-                    {/* Amount */}
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Amount</label>
-                        <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">Rp</span>
-                            <input
-                                type="number"
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                onWheel={(e) => e.target.blur()}
-                                className="w-full pl-12 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white focus:border-primary-500"
-                                placeholder="0"
-                                min="0"
-                                step="any"
-                                required
-                            />
-                        </div>
-                    </div>
-
-                    {/* Category */}
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
-                        <div className="grid grid-cols-4 gap-2">
-                            {categories.map((cat) => (
+                        {/* Left column */}
+                        <div className="flex-1 space-y-4">
+                            {/* Type Toggle */}
+                            <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-700 rounded-xl">
                                 <button
-                                    key={cat.id}
                                     type="button"
-                                    onClick={() => setCategory(cat.id)}
-                                    className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${category === cat.id
-                                        ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-500/20'
-                                        : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
+                                    onClick={() => setType('expense')}
+                                    className={`flex-1 py-2 rounded-lg font-medium transition-all text-sm ${type === 'expense'
+                                        ? 'bg-red-500 text-white shadow-lg'
+                                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                                         }`}
                                 >
-                                    <span className="text-xl">{cat.icon}</span>
-                                    <span className="text-xs text-gray-600 dark:text-gray-300 truncate w-full text-center">
-                                        {cat.name.split(' ')[0]}
-                                    </span>
+                                    Expense
                                 </button>
-                            ))}
+                                <button
+                                    type="button"
+                                    onClick={() => setType('income')}
+                                    className={`flex-1 py-2 rounded-lg font-medium transition-all text-sm ${type === 'income'
+                                        ? 'bg-green-500 text-white shadow-lg'
+                                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                        }`}
+                                >
+                                    Income
+                                </button>
+                            </div>
+
+                            {/* Amount */}
+                            <div className="space-y-1">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Amount</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">Rp</span>
+                                    <input
+                                        type="number"
+                                        value={amount}
+                                        onChange={(e) => setAmount(e.target.value)}
+                                        onWheel={(e) => e.target.blur()}
+                                        className="w-full pl-12 pr-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white focus:border-primary-500"
+                                        placeholder="0"
+                                        min="0"
+                                        step="any"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Category */}
+                            <div className="space-y-1">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
+                                <div className="grid grid-cols-5 gap-1.5">
+                                    {categories.map((cat) => (
+                                        <button
+                                            key={cat.id}
+                                            type="button"
+                                            onClick={() => setCategory(cat.id)}
+                                            className={`p-2 rounded-lg flex flex-col items-center gap-0.5 transition-all ${category === cat.id
+                                                ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-500/20'
+                                                : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
+                                                }`}
+                                        >
+                                            <span className="text-lg">{cat.icon}</span>
+                                            <span className="text-[10px] text-gray-600 dark:text-gray-300 truncate w-full text-center">
+                                                {cat.name.split(' ')[0]}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Payment Method */}
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Payment Method</label>
-                        <div className="grid grid-cols-3 gap-2">
-                            {PAYMENT_METHODS.map((method) => {
-                                const Icon = method.icon;
-                                return (
-                                    <button
-                                        key={method.id}
-                                        type="button"
-                                        onClick={() => setPaymentMethod(method.id)}
-                                        className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${paymentMethod === method.id
-                                            ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-500/20'
-                                            : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
-                                            }`}
-                                    >
-                                        <Icon size={20} style={{ color: method.color }} />
-                                        <span className="text-xs text-gray-600 dark:text-gray-300">
-                                            {method.label}
-                                        </span>
-                                    </button>
-                                );
-                            })}
+                        {/* Right column */}
+                        <div className="flex-1 space-y-4 mt-4 lg:mt-0">
+                            {/* Payment Method */}
+                            <div className="space-y-1">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Payment</label>
+                                <div className="grid grid-cols-3 gap-1.5">
+                                    {PAYMENT_METHODS.map((method) => {
+                                        const Icon = method.icon;
+                                        return (
+                                            <button
+                                                key={method.id}
+                                                type="button"
+                                                onClick={() => setPaymentMethod(method.id)}
+                                                className={`p-2 rounded-lg flex flex-col items-center gap-0.5 transition-all ${paymentMethod === method.id
+                                                    ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-500/20'
+                                                    : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
+                                                    }`}
+                                            >
+                                                <Icon size={18} style={{ color: method.color }} />
+                                                <span className="text-[10px] text-gray-600 dark:text-gray-300">
+                                                    {method.label}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Description */}
+                            <div className="space-y-1">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+                                <input
+                                    type="text"
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white focus:border-primary-500"
+                                    placeholder="What was this for?"
+                                />
+                            </div>
+
+                            {/* Date */}
+                            <div className="space-y-1">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
+                                <input
+                                    type="date"
+                                    value={date}
+                                    onChange={(e) => setDate(e.target.value)}
+                                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white focus:border-primary-500"
+                                    required
+                                />
+                            </div>
                         </div>
-                    </div>
-
-                    {/* Description */}
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Description (optional)</label>
-                        <input
-                            type="text"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white focus:border-primary-500"
-                            placeholder="What was this for?"
-                        />
-                    </div>
-
-                    {/* Date */}
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
-                        <input
-                            type="date"
-                            value={date}
-                            onChange={(e) => setDate(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white focus:border-primary-500"
-                            required
-                        />
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-3 pt-2">
+                    <div className="flex gap-2 pt-4 border-t border-gray-100 dark:border-gray-700 mt-4">
                         <button
                             type="button"
                             onClick={() => setShowStartingBalance(true)}
-                            className="p-3 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                            className="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                             title="Set starting balance"
                         >
-                            <Wallet size={20} className="text-gray-600 dark:text-gray-300" />
+                            <Wallet size={18} className="text-gray-600 dark:text-gray-300" />
                         </button>
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                            className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all text-sm"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
-                            className={`flex-1 py-3 rounded-xl text-white font-medium shadow-lg transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2 ${type === 'expense'
+                            className={`flex-1 py-2.5 rounded-xl text-white font-medium shadow-lg transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2 text-sm ${type === 'expense'
                                 ? 'gradient-danger shadow-red-500/30'
                                 : 'gradient-primary shadow-primary-500/30'
                                 }`}
                         >
-                            <Save size={20} />
+                            <Save size={18} />
                             Save
                         </button>
                     </div>
